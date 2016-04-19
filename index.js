@@ -1,4 +1,5 @@
 var globby = require("globby");
+var globBase = require("glob-base");
 var resolve = require("resolve");
 var argv = require("yargs")
   .usage('Usage: $0 [--use|-u] plugin [--config|-c config.json] [--output|-o output.css] [input.css]')
@@ -21,6 +22,9 @@ var argv = require("yargs")
   .describe('o', 'Output file (stdout if not provided)')
   .alias('d', 'dir')
   .describe('d', 'Output directory')
+  .boolean('f')
+  .alias('f', 'flat')
+  .describe('f', 'Flatten output directory')
   .alias('m', 'map')
   .describe('m', 'Source map')
   .boolean('r')
@@ -88,6 +92,11 @@ if (argv.use.indexOf("postcss-import") !== -1) {
 
 // Join inputs from --input and positional paramters
 argv.input = argv.input ? [].concat(argv.input, argv._) : argv._;
+
+// Construct input globs from command line paramters
+var inputGlobs = argv.input.map(function (v) {
+  return globBase(v);
+});
 
 // Generate list of input files
 var inputFiles = argv.input.length ? globby.sync(argv.input) : [undefined];
@@ -177,7 +186,17 @@ function fsWatcher(entryPoints) {
 function compile(input, fn) {
   var output = argv.output;
   if (argv.dir) {
-    output = path.join(argv.dir, path.basename(input));
+    var outName = path.basename(input);
+    var outDir = '';
+    if (!argv.flat) {
+      for (var i = 0; i < inputGlobs.length; i++) {
+        if (input.startsWith(inputGlobs[i].base)) {
+          outDir = path.dirname(input).slice(inputGlobs[i].base.length);
+          break;
+        }
+      }
+    }
+    output = path.join(argv.dir, outDir, outName);
   } else if (argv.replace) {
     output = input;
   }
