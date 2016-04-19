@@ -63,6 +63,9 @@ var argv = require("yargs")
     if (argv.dir && argv.replace) {
       throw 'Both `output directory` and `replace` provided: please use either --dir or --replace option.';
     }
+    if ((argv.dir || argv.replace) && !(argv.input || argv._.length)) {
+      throw '`output directory` or `replace` provided with stdin input: Please use --output or stdout instead.';
+    }
     return true;
   })
   .argv;
@@ -83,12 +86,11 @@ if (argv.use.indexOf("postcss-import") !== -1) {
   }
 }
 
-var inputFiles = argv._.length ? argv._ : argv.input;
-inputFiles = globby.sync(inputFiles);
-if (!inputFiles.length) {
-  // use stdin if nothing else is specified
-  inputFiles = [undefined];
-}
+// Join inputs from --input and positional paramters
+argv.input = argv.input ? [].concat(argv.input, argv._) : argv._;
+
+// Generate list of input files
+var inputFiles = argv.input.length ? globby.sync(argv.input) : [undefined];
 if (inputFiles.length > 1 && !argv.dir && !argv.replace) {
   throw 'Please specify either --replace or --dir [output directory] for your files';
 }
