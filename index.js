@@ -196,6 +196,9 @@ function compile(input, fn) {
         }
       }
     }
+    if ((argv.use.indexOf('precss') > -1) && outName.endsWith('.scss')) {
+      outName = outName.replace(/scss$/, 'css');
+    }
     output = path.join(argv.dir, outDir, outName);
   } else if (argv.replace) {
     output = input;
